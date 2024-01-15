@@ -15,6 +15,7 @@
 #include "sleeplock.h"
 #include "file.h"
 #include "fcntl.h"
+#include "trace.h"
 
 // Fetch the nth word-sized system call argument as a file descriptor
 // and return both the descriptor and the corresponding struct file.
@@ -324,12 +325,36 @@ sys_open(void)
   iunlock(ip);
   end_op();
 
+  if(trace_enabled && !strncmp(path, trace_pathname, sizeof(path))){
+    trace_counter++;
+  }
+
   f->type = FD_INODE;
   f->ip = ip;
   f->off = 0;
   f->readable = !(omode & O_WRONLY);
   f->writable = (omode & O_WRONLY) || (omode & O_RDWR);
   return fd;
+}
+
+int
+sys_trace(void)
+{
+  if(argstr(0, &trace_pathname) < 0)
+    return -1;
+  if(!trace_pathname)
+    return -1;
+  if(strlen(trace_pathname) > 255)
+    return -1;
+  trace_counter = 0;
+  trace_enabled = 1;
+  return 0;
+}
+
+int
+sys_getcount(void)
+{
+  return trace_counter;
 }
 
 int

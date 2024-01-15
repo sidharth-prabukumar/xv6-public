@@ -7,6 +7,7 @@
 #include "syscall.h"
 #include "traps.h"
 #include "memlayout.h"
+#include "trace.h"
 
 char buf[8192];
 char name[3];
@@ -298,6 +299,77 @@ exectest(void)
     printf(stdout, "exec echo failed\n");
     exit();
   }
+}
+
+void tracetest(void)
+{
+  printf(stdout, "trace test\n");
+  if(0 != trace_enabled){
+    printf(stdout, "trace is already enabled");
+    exit();
+  }
+  char * test_name = "blah file";
+  if(trace(test_name)){
+    printf(stdout, "trace test on file name failed");
+    exit();
+  }
+  if(!trace((const char *)0)){
+    printf(stdout, "trace test on NULL failed");
+    exit();
+  }
+  if(!trace("To develop a better sense of how an operating system works, you will also do a few projects inside a real OS kernel. The kernel we'll be using is a port of the original Unix (version 6), and is runnable on modern x86 processors. It was developed at MIT and is a small and relatively understandable OS and thus an excellent focus for simple projects.")){
+    printf(stdout, "trace test on long filename failed");
+    exit();
+  }
+  printf(stdout, "trace test ok %s\n", trace_pathname);
+}
+
+void getcounttest(void)
+{
+  printf(stdout, "trace count test\n");
+  trace_counter = 0;
+  if(trace("test file")){
+    printf(stdout, "trace on file name failed");
+    exit();
+  }
+  if(0 != getcount()){
+    printf(stdout, "trace count test failed");
+    exit();
+  }
+  int fd;
+
+  fd = open("test file", O_CREATE|O_RDWR);
+  if(fd < 0){
+    printf(stdout, "error: creat file failed!\n");
+    exit();
+  }
+  close(fd);
+  if(1 != getcount()){
+    printf(stdout, "trace count test failed. count = %d\n", getcount());
+    printf(stdout, "trace_enabled = %d\n", trace_enabled);
+    exit();
+  }
+
+  fd = open("test file", O_CREATE|O_RDWR);
+  if(fd < 0){
+    printf(stdout, "error: creat file failed!\n");
+    exit();
+  }
+  close(fd);
+  if(2 != getcount()){
+    printf(stdout, "trace count test failed. count = %d\n", getcount());
+    printf(stdout, "trace_enabled = %d\n", trace_enabled);
+    exit();
+  }
+  if(trace("test file")){
+    printf(stdout, "trace on file name failed");
+    exit();
+  }
+  if(0 != getcount()){
+    printf(stdout, "trace count test 2 failed");
+    exit();
+  }
+  printf(stdout, "trace count test ok\n");
 }
 
 // simple fork and pipe read/write
@@ -1797,6 +1869,8 @@ main(int argc, char *argv[])
 
   uio();
 
+  tracetest();
+  getcounttest();
   exectest();
 
   exit();
